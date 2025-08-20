@@ -157,7 +157,7 @@
                             </div>
                             
                             <div>
-                                <label for="contractor" class="block text-sm font-medium text-gray-700 mb-1">Contractor *</label>
+                                <label for="contractor" class="block text-sm font-medium text-gray-700 mb-1">Contractor</label>
                                 <input type="text" id="contractor" name="contractor" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                                 <p class="text-red-500 text-sm mt-1 hidden" id="contractorError">Please enter a contractor name</p>
                             </div>
@@ -500,7 +500,7 @@
         const unlockButton = document.getElementById('unlockButton');
         const errorMessage = document.getElementById('errorMessage');
 
-        const CORRECT_PASSWORD = 'V1ctoriaG@rdens'; // exact match required
+        const CORRECT_PASSWORD = 'victoriagardens'; // exact match required
 
         unlockButton.addEventListener('click', function() {
             const enteredPassword = passwordInput.value;
@@ -618,7 +618,7 @@
             const status = document.getElementById('status');
             const unitNumber = document.getElementById('unitNumber');
             const contractor = document.getElementById('contractor');
-            const request = document.getElementById('request'); // Changed from requestIssue
+            const request = document.getElementById('request');
             const cost = document.getElementById('cost');
 
             if (!unitNumber.value.trim()) {
@@ -627,17 +627,18 @@
             } else {
                 document.getElementById('unitNumberError').classList.add('hidden');
             }
-            if (!contractor.value.trim()) {
-                document.getElementById('contractorError').classList.remove('hidden');
+            // Removed validation for contractor field to make it optional
+            // if (!contractor.value.trim()) {
+            //     document.getElementById('contractorError').classList.remove('hidden');
+            //     isValid = false;
+            // } else {
+            //     document.getElementById('contractorError').classList.add('hidden');
+            // }
+            if (!request.value.trim()) {
+                document.getElementById('requestError').classList.remove('hidden');
                 isValid = false;
             } else {
-                document.getElementById('contractorError').classList.add('hidden');
-            }
-            if (!request.value.trim()) { // Changed from requestIssue
-                document.getElementById('requestError').classList.remove('hidden'); // Changed from requestIssueError
-                isValid = false;
-            } else {
-                document.getElementById('requestError').classList.add('hidden'); // Changed from requestIssueError
+                document.getElementById('requestError').classList.add('hidden');
             }
             if (!status.value) {
                 document.getElementById('statusError').classList.remove('hidden');
@@ -654,8 +655,8 @@
             // Create new job
             const newJob = {
                 unitNumber: unitNumber.value.trim(),
-                contractor: contractor.value.trim(),
-                request: request.value.trim(), // Changed from requestIssue
+                contractor: contractor.value.trim() || null, // Now sets to null if blank
+                request: request.value.trim(),
                 cost: cost.value ? parseFloat(cost.value) : null,
                 status: status.value,
                 notes: document.getElementById('notes').value.trim(),
@@ -720,7 +721,8 @@
                         <input type="checkbox" class="job-checkbox" data-id="${job.id}">
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">${job.unitNumber}</td>
-                    <td class="px-6 py-4">${job.request}</td> <td class="px-6 py-4 whitespace-nowrap">${job.contractor}</td>
+                    <td class="px-6 py-4">${job.request}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${job.contractor || '-'}</td>
                     <td class="px-6 py-4 whitespace-nowrap">${job.cost ? '$' + job.cost.toFixed(2) : '-'}</td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="px-2 py-1 rounded-full text-xs font-semibold ${getStatusClass(job.status)}">${job.status === 'In progress' ? 'In Progress' : job.status}</span>
@@ -791,8 +793,8 @@
             
             document.getElementById('editJobId').value = job.id;
             document.getElementById('editUnitNumber').value = job.unitNumber;
-            document.getElementById('editContractor').value = job.contractor;
-            document.getElementById('editRequest').value = job.request; // Changed from editRequestIssue
+            document.getElementById('editContractor').value = job.contractor || '';
+            document.getElementById('editRequest').value = job.request;
             document.getElementById('editCost').value = job.cost || '';
             document.getElementById('editStatus').value = job.status;
             document.getElementById('editNotes').value = job.notes || '';
@@ -813,7 +815,7 @@
             
             const editUnitNumber = document.getElementById('editUnitNumber');
             const editContractor = document.getElementById('editContractor');
-            const editRequest = document.getElementById('editRequest'); // Changed from editRequestIssue
+            const editRequest = document.getElementById('editRequest');
             const editCost = document.getElementById('editCost');
             const editStatus = document.getElementById('editStatus');
 
@@ -824,11 +826,11 @@
             } else {
                 document.getElementById('editUnitNumberError').classList.add('hidden');
             }
-            if (!editRequest.value.trim()) { // Changed from editRequestIssue
-                document.getElementById('editRequestError').classList.remove('hidden'); // Changed from editRequestIssueError
+            if (!editRequest.value.trim()) {
+                document.getElementById('editRequestError').classList.remove('hidden');
                 isValid = false;
             } else {
-                document.getElementById('editRequestError').classList.add('hidden'); // Changed from editRequestIssueError
+                document.getElementById('editRequestError').classList.add('hidden');
             }
             if (!editStatus.value) {
                 document.getElementById('editStatusError').classList.remove('hidden');
@@ -836,14 +838,7 @@
             } else {
                 document.getElementById('editStatusError').classList.add('hidden');
             }
-            // Removed contractor validation for editing, it's now optional
-            // if (!editContractor.value.trim()) {
-            //     document.getElementById('editContractorError').classList.remove('hidden');
-            //     isValid = false;
-            // } else {
-            //     document.getElementById('editContractorError').classList.add('hidden');
-            // }
-
+            
             if (!isValid) {
                 showToast("Please fill in all required fields.");
                 return;
@@ -853,8 +848,8 @@
             
             db.collection("jobs").doc(jobId).update({
                 unitNumber: editUnitNumber.value.trim(),
-                contractor: editContractor.value.trim(),
-                request: editRequest.value.trim(), // Changed from requestIssue
+                contractor: editContractor.value.trim() || null, // Now sets to null if blank
+                request: editRequest.value.trim(),
                 cost: editCost.value ? parseFloat(editCost.value) : null,
                 status: editStatus.value,
                 notes: document.getElementById('editNotes').value.trim(),
@@ -1123,9 +1118,9 @@
                         const batch = db.batch();
                         jobsToImport.forEach(row => {
                             const newJob = {
-                                unitNumber: String(row['Unit Number'] || row.unitNumber || '').trim(), // Adjusted to check both "Unit Number" and "unitNumber"
-                                request: String(row['Request'] || row['Request/Issue'] || row.request || row.issue || '').trim(), // Adjusted to check multiple possible headers
-                                contractor: row['Contractor'] ? String(row['Contractor']).trim() : '',
+                                unitNumber: String(row['Unit Number'] || row.unitNumber || '').trim(),
+                                request: String(row['Request'] || row['Request/Issue'] || row.request || row.issue || '').trim(),
+                                contractor: row['Contractor'] ? String(row['Contractor']).trim() : null, // Updated to store as null if blank
                                 cost: row['Cost'] ? parseFloat(row['Cost']) : null,
                                 status: row['Status'] ? String(row['Status']).trim() : 'Request',
                                 notes: row['Notes'] ? String(row['Notes']).trim() : '',
