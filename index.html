@@ -93,20 +93,27 @@
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
-    <div id="lockScreen" class="fixed inset-0 flex items-center justify-center lock-screen z-50 fade-in">
+    <div id="authScreen" class="fixed inset-0 flex items-center justify-center lock-screen z-50 fade-in">
         <div class="glass-effect rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl">
             <div class="text-center mb-8">
-                <i class="fas fa-lock text-white text-5xl mb-4"></i>
+                <i class="fas fa-user-lock text-white text-5xl mb-4"></i>
                 <h1 class="text-2xl font-bold text-white mb-2">Maintenance Request Tracker</h1>
-                <p class="text-gray-200">Enter password to continue</p>
+                <p class="text-gray-200">Sign in to your account</p>
             </div>
-            <div class="mb-4">
-                <input type="password" id="passwordInput" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-20 text-white placeholder-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-300 password-input" placeholder="Enter password">
-                <p id="errorMessage" class="text-red-300 text-sm mt-2 hidden">Incorrect password. Please try again.</p>
-            </div>
-            <button id="unlockButton" class="w-full bg-white text-blue-800 py-3 rounded-lg font-semibold hover:bg-blue-100 transition duration-200 flex items-center justify-center">
-                <i class="fas fa-unlock-alt mr-2"></i> Unlock
-            </button>
+            <form id="authForm" class="space-y-4">
+                <div>
+                    <input type="email" id="emailInput" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-20 text-white placeholder-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-300" placeholder="Email address">
+                    <p id="emailError" class="text-red-300 text-sm mt-2 hidden">Please enter a valid email.</p>
+                </div>
+                <div>
+                    <input type="password" id="passwordInput" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-20 text-white placeholder-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-300" placeholder="Password">
+                    <p id="passwordError" class="text-red-300 text-sm mt-2 hidden">Password must be at least 6 characters long.</p>
+                </div>
+                <p id="errorMessage" class="text-red-300 text-sm mt-2 hidden">Invalid credentials. Please try again.</p>
+                <button type="submit" id="signInButton" class="w-full bg-white text-blue-800 py-3 rounded-lg font-semibold hover:bg-blue-100 transition duration-200 flex items-center justify-center">
+                    <i class="fas fa-sign-in-alt mr-2"></i> Sign In
+                </button>
+            </form>
         </div>
     </div>
 
@@ -515,6 +522,7 @@
 
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
@@ -532,48 +540,102 @@
         // Initialize Firebase
         const app = firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+        const auth = firebase.auth();
         let jobs = []; // Will be populated by Firestore listener
         let isBulkEditMode = false;
         let currentSortColumn = 'createdAt';
         let currentSortDirection = 'desc';
     </script>
     <script>
-        // Password check
-        const lockScreen = document.getElementById('lockScreen');
+        // Authentication Logic
+        const authScreen = document.getElementById('authScreen');
         const mainApp = document.getElementById('mainApp');
+        const authForm = document.getElementById('authForm');
+        const emailInput = document.getElementById('emailInput');
         const passwordInput = document.getElementById('passwordInput');
-        const unlockButton = document.getElementById('unlockButton');
         const errorMessage = document.getElementById('errorMessage');
+        const emailError = document.getElementById('emailError');
+        const passwordError = document.getElementById('passwordError');
+        
+        // This is a new event listener for the form submission
+        authForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            
+            // Basic validation
+            let isValid = true;
+            emailError.classList.add('hidden');
+            passwordError.classList.add('hidden');
+            errorMessage.classList.add('hidden');
 
-        const CORRECT_PASSWORD = 'V1ctoriaG@rdens'; // exact match required
+            if (!email || !email.includes('@')) {
+                emailError.textContent = 'Please enter a valid email address.';
+                emailError.classList.remove('hidden');
+                isValid = false;
+            }
+            if (!password || password.length < 6) {
+                passwordError.textContent = 'Password must be at least 6 characters.';
+                passwordError.classList.remove('hidden');
+                isValid = false;
+            }
 
-        unlockButton.addEventListener('click', function() {
-            const enteredPassword = passwordInput.value;
-            if (enteredPassword === CORRECT_PASSWORD) {
-                // Correct password - show main app and hide lock screen
-                lockScreen.classList.add('hidden');
+            if (!isValid) return;
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // Signed in successfully
+                    console.log("User signed in:", userCredential.user);
+                    // The auth state change listener will handle the UI update
+                })
+                .catch((error) => {
+                    let message = "An error occurred. Please try again.";
+                    switch(error.code) {
+                        case 'auth/user-not-found':
+                        case 'auth/wrong-password':
+                            message = 'Invalid email or password.';
+                            break;
+                        case 'auth/invalid-email':
+                            message = 'The email address is not valid.';
+                            break;
+                    }
+                    errorMessage.textContent = message;
+                    errorMessage.classList.remove('hidden');
+                    passwordInput.classList.add('shake');
+                    setTimeout(() => passwordInput.classList.remove('shake'), 500);
+                });
+        });
+
+        // Listen for auth state changes
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                // User is signed in
+                authScreen.classList.add('hidden');
                 mainApp.classList.remove('hidden');
                 document.body.classList.remove('lock-screen');
-                
-                // Initialize the app
                 setupFirestoreListener();
             } else {
-                // Wrong password - show error
-                errorMessage.textContent = 'Incorrect password. Please try again.';
-                errorMessage.classList.remove('hidden');
-                passwordInput.classList.add('shake');
+                // User is signed out
+                mainApp.classList.add('hidden');
+                authScreen.classList.remove('hidden');
+                emailInput.value = '';
                 passwordInput.value = '';
-                setTimeout(() => {
-                    passwordInput.classList.remove('shake');
-                }, 500);
+                document.body.classList.add('lock-screen');
+                if (unsubscribeJobs) {
+                    unsubscribeJobs();
+                }
             }
         });
+
         document.getElementById('logoutButton').addEventListener('click', () => {
-            mainApp.classList.add('hidden');
-            lockScreen.classList.remove('hidden');
-            passwordInput.value = '';
-            errorMessage.classList.add('hidden');
-            document.body.classList.add('lock-screen');
+            auth.signOut()
+                .then(() => {
+                    showToast("Signed out successfully!");
+                })
+                .catch((error) => {
+                    console.error("Logout Error:", error);
+                    showToast("Error signing out.");
+                });
         });
         
         // Navigation
